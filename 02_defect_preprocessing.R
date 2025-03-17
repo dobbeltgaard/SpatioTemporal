@@ -65,12 +65,48 @@ IDs = IDs[!is.na(IDs)] #remove nans
 defect_set = list()
 for(i in 1:length(IDs)){
   idx = d$Defect_ID3 == IDs[i]
-  defect_set[[toString(IDs[i])]] = d[idx,]
+  foo = d[idx,]
+  x = split(foo,list(foo$Rail_string,foo$Defect_found_in), drop=TRUE) #split to unique defects, so rail string and defect_found_in surely matches
+  if(NROW(x) < 2){ defect_set[[toString(IDs[i])]] = x[[1]]; next} #if data correct, then no splitting is needed
+  for(j in 1:NROW(x)){
+    nam = paste0(sprintf("%.0f", 100000000),toString(IDs[i]),j) #naming of split defect
+    defect_set[[nam]] = x[[j]]
+  }
 }
 names(defect_set) = as.numeric(names(defect_set))
 
 
 
+
+M = matrix(NA, nrow = length(defect_set), ncol = 3)
+for(i in 1:length(defect_set)){
+  foo = defect_set[[i]]
+  M[i,1] = NROW(foo)
+  M[i,2] = max(table(foo$Defect_found_in))
+  M[i,3] = min(c(max(table(foo$Defect_found_in)),
+                 max(table(foo$Rail_string))
+                 )
+               )
+  }
+
+
+table(M[,1])
+table(M[,2])
+which(M[,3] ==10)
+
+
+(defect_set[[8939    ]])
+
+
+
+
+#sort after dates
+#State: Removed. 
+#Should UIC MATCH? Should Defect_found_in match? Should From and To match? Should Rail_String match?
+
+
+
+length(defect_set)
 ## This defect_set could function as a database over defects.
 ## Then functions could be written for instance to: 
 # - taburalize defect counts based on UIC, or spatial distribution, etc.
