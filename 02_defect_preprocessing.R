@@ -102,7 +102,8 @@ which(M[,3] ==10)
 
 #sort after dates
 #State: Removed. 
-#Should UIC MATCH? Should Defect_found_in match? Should From and To match? Should Rail_String match?
+
+#Before sending to Xiaokun: Only send defects with more than one obs. Remember to remove unneeded columns for better readability.
 
 
 
