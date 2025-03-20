@@ -7,8 +7,8 @@ library(tibble)
 source("99_translations_and_naming_convetions.R")
 
 #path = "C:/Users/atbd/COWI/A235142 - Predictive maintanance ph.d project (1502) - Documents/Data/BDK/"
-path = "C:/Users/ATBD/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
-#path = "C:/Users/askbi/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
+#path = "C:/Users/ATBD/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
+path = "C:/Users/askbi/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
 #path = "D:/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
 
 
@@ -86,13 +86,13 @@ for(i in 1:length(IDs)){
     foo2$Maintenance_date = NA
     foo2$Maintenance_type = NA
     foo2$Amount = NA
+    foo2$Passages = NA
     defect_set[[nam]] = foo2
   }
 }
 names(defect_set) = as.numeric(names(defect_set))
 
-#save(defect_set, file = "C:/Users/ATBD/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_without_maintenance.RData")
-#load("C:/Users/ATBD/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_without_maintenance.RData")
+#save(defect_set, file = "C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set.RData")
 
 ### this data set should be loaded into the spatio-temporal network! ###
 
@@ -100,6 +100,8 @@ names(defect_set) = as.numeric(names(defect_set))
 #################################################
 ### COMBINE DEFECT DATA WITH MAINTENANCE DATA ###
 #################################################
+rm(list = ls())
+load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_without_maintenance.RData")
 main = read.csv(file = "rail_maintenance.csv")
 for(i in 1:length(defect_set)){
   if(NROW(defect_set[[i]])>1){ #if there are more than one observation
@@ -112,23 +114,22 @@ for(i in 1:length(defect_set)){
         cond3 = foo$Time[j] > defect_set[[i]]$Date  
         cond4 = foo$Time[j] < defect_set[[i]]$Date
         if(any(cond3) & any(cond4)){ #if maintenance is between 
-          defect_set[[i]][which(cond4)[1],c("Maintenance_date","Maintenance_type","Amount")] =
-            foo[j,c("Time", "action","removed_mm") ]
+          defect_set[[i]][which(cond4)[1],c("Maintenance_date","Maintenance_type","Amount", "Passages")] =
+            foo[j,c("Time", "action","removed_mm", "Passages") ]
         }
       }
     }
   }
 }
-#save(defect_set, file = "C:/Users/ATBD/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_with_maintenance.RData")
+## save(defect_set, file = "C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_with_maintenance.RData")
 
 #############################################################
 #### COMBINE with static data. Tonnage. Speed. Curveture. ###
 #############################################################
-
-library(readxl)
-source("99_translations_and_naming_convetions.R")
-load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_with_maintenance.RData")
-
+## rm(list = ls())
+## library(readxl)
+## source("99_translations_and_naming_convetions.R")
+## load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_with_maintenance.RData")
 
 path = "C:/Users/askbi/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
 asset.files = list.files(paste0(path, "Asset Data"), full.names = T)
@@ -305,9 +306,16 @@ for(i in 1:length(defect_set)){
   defect_set[[i]]$defect_size = -defect_set[[i]]$Depth_from + defect_set[[i]]$Depth_to 
   }
 
+
+#save(defect_set, file = "C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories_reference_dataset.RData")
+
+
 ####################################################
 ### CONSTRUCT DEFECT DATAFRAME WITH TRAJECTORIES ###
 ####################################################
+rm(list = ls())
+load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories_reference_dataset.RData")
+
 D = NULL
 for(i in 1:length(defect_set)){
   n_trajectories = NROW(defect_set[[i]]) - 1
@@ -316,12 +324,12 @@ for(i in 1:length(defect_set)){
   
   d = data.frame(ID = rep(names(defect_set)[i], n_trajectories), Date1 = as.Date(NA), Date2 = as.Date(NA), 
                  Size1 = NA, Size2 = NA, Maintenance_date = as.Date(NA), Maintenance_type = NA, 
-                 Maintenance_amount = NA, Defect_in = NA, UIC = NA, Rail_string = NA, 
+                 Maintenance_amount = NA, Passages = NA, Defect_in = NA, UIC = NA, Rail_string = NA, 
                  Track_type = NA, Track_type2 = NA, Track_type3 = NA, Year = NA, 
                  Defect_group1 = NA, Defect_group2 = NA, Combined_defect = NA, 
                  Profile = NA, Rail_type = NA, Steel = NA, Steel2 = NA, Overheight = NA, 
                  Curve = NA, MGT_min = NA, MGT_max = NA,EMGT_min = NA,
-                 EMGT_max = NA, Line_speed = NA, Turnout_indicator = NA)
+                 EMGT_max = NA, Line_speed = NA, Turnout_indicator = NA, State = NA)
   
   for(j in 1:n_trajectories){
     d$Date1[j] = defect_set[[i]]$Date[j]
@@ -335,6 +343,7 @@ for(i in 1:length(defect_set)){
     d$Maintenance_date[j] = defect_set[[i]]$Maintenance_date[j+1]
     d$Maintenance_type[j] = defect_set[[i]]$Maintenance_type[j+1]
     d$Maintenance_amount[j] = defect_set[[i]]$Amount[j+1]
+    d$Passages[j] = defect_set[[i]]$Passages[j+1]
     
     d$Defect_in[j] = defect_set[[i]]$Defect_found_in[j+1]
     d$UIC[j] = defect_set[[i]]$UIC[j+1]
@@ -351,8 +360,8 @@ for(i in 1:length(defect_set)){
     d$Overheight[j] = defect_set[[i]]$Overheight[j+1]
     d$Curve[j] = defect_set[[i]]$Curve[j+1]
     
-    d[j, c("MGT_min", "MGT_max", "EMGT_min" ,"EMGT_max" ,"Line_speed", "Turnout_indicator")] = 
-      defect_set[[i]][j+1, c("MGT_min", "MGT_max", "EMGT_min" ,"EMGT_max" ,"Line_speed", "Turnout_indicator")]
+    d[j, c("MGT_min", "MGT_max", "EMGT_min" ,"EMGT_max" ,"Line_speed", "Turnout_indicator", "State")] = 
+      defect_set[[i]][j+1, c("MGT_min", "MGT_max", "EMGT_min" ,"EMGT_max" ,"Line_speed", "Turnout_indicator", "State")]
   }
   if(is.null(D)){
     D = d
@@ -361,66 +370,82 @@ for(i in 1:length(defect_set)){
   }
 }
 
-idx = is.na(D$Size1) | is.na(D$Size2) 
-D = D[!idx, ]
 
-
-#INITAL INVESTIGATION OF THE DATA IN D
-D$t = as.numeric(D$Date2 - D$Date1)
-D$dSize = D$Size2 - D$Size1
+#MAINTENANCE ENCODING
+D$Removed_status = D$State == "Removed" #Encoding of binary Remove control action
+D$Grinding = D$Maintenance_type %in% c("Grinding", "Grinding (HS)") 
+D$Milling = D$Maintenance_type %in% c("Milling", "Milling (HS)")
+D$Planing = D$Maintenance_type %in% c("Planing")
 D$Maintenance_indicator = 0
-D$Maintenance_indicator[!is.na(D$Maintenance_type)] = 1
+D$Maintenance_indicator[!is.na(D$Maintenance_date)] = 1
+D$Passages[is.na(D$Maintenance_date)] = 0
 
-fit  = lm(formula = dSize ~ t + Maintenance_indicator + 0, data = D)
-summary(fit)
+sum(is.na(D$Maintenance_date) == (D$Grinding | D$Milling | D$Planing)) #CHECK IF MAINTENANCE DATES EXISTS WHEN MAINTENANCE IS CONDUCTED:
 
-plot(D$dSize)
-head(D)
+#TURNOUT ENCODING
+idx = D$Turnout_indicator %in% c(1) & D$Track_type %in% c("Standard_track"); D$Track_type[idx] = "Switch" #Find turnout_indications not repored in track_type
+idx = !D$Turnout_indicator %in% c(1) & !D$Track_type %in% c("Standard_track", "Unknown"); D$Turnout_indicator[idx] = 1 #Overwrite turnout indications, where track type reports turnout
+idx = D$Rail_type %in% c("Switch") & D$Turnout_indicator %in% c(0); D$Turnout_indicator[idx] = 1 #Overwrite turnout indications where rail_type is reported as switch
+
+#WELD ENCODINGS
+D$Aluminothermic_weld = D$Defect_in %in% c("Aluminothermic_welding")
+D$Flash_butt_weld = D$Defect_in %in% c("Flash_butt_welding")
+D$Other_weld = !D$Defect_in %in% c("Aluminothermic_welding","Flash_butt_welding","Clean_rail")
+D$Weld = !D$Defect_in %in% c("Clean_rail")
+
+#CURVE ENCODINGS
+D$In_curve = D$Track_type3 %in% c("Curve")
+D$In_trans_curve = D$Track_type3 %in% c("Transition_curve")
+D$In_straight_track = D$Track_type3 %in% c("Straigt_track")
+
+#PROFILE ENCODINGS
+idx = (is.na(D$Profile) & is.na(D$Rail_type)) | 
+  (is.na(D$Profile) & D$Rail_type %in% c("Switch")); D = D[!idx,]  #remove rows with no useful information on profile (*= 8 rows)
+D$Rail_type[is.na(D$Rail_type)] = D$Profile[is.na(D$Rail_type)] #overwrite NANs
+D$Profile[is.na(D$Profile)] = D$Rail_type[is.na(D$Profile)] #Overwrite nans
+library(stringr)
+extract_two_digits <- function(strings) {str_extract(strings, "\\d{2}")} #convert strings to digits
+D$Rail_weight_1m = extract_two_digits(D$Profile)
+
+#STEEL ENCODINGS
+extract_three_digits <- function(strings) {str_extract(strings, "\\d{3}")}
+D$Steel_hardness = extract_three_digits(D$Steel)
+
+#REMOVE OBS MISSING SUBSTANTIAL INFORMATION
+idx = is.na(D$UIC) | is.na(D$Size1) | is.na(D$Size2) | is.na(D$Date1) | is.na(D$Date2); D = D[!idx, ]
+
+#CONSTRUCT VARIABLES FOR MODELING
+D$t = as.numeric(D$Date2 - D$Date1)/365
+D$dSize = D$Size2 - D$Size1
+D$Age = (as.numeric( D$Date1 - as.Date(D$Year)) / 365)
+
+#DEFINE VARIABLE FOR EXTRACTION
+essential_cols = c("ID","dSize", "t", "UIC")
+reference_cols = c("Size1", "Size2","Date1", "Date2", "Rail_string")
+maintenan_cols = c("Maintenance_date","Maintenance_indicator", "Grinding", "Milling", "Planing", "Passages","Removed_status")
+structure_cols = c("In_straight_track", "In_curve", "In_trans_curve","Turnout_indicator","Weld","Aluminothermic_weld","Flash_butt_weld","Other_weld")
+covariate_cols = c("Age", "Curve", "Rail_weight_1m", "Steel_hardness", "Line_speed", "MGT_max")
+
+#Checking number of NANS
+#sum(apply(X = D[, c(essential_cols,reference_cols, structure_cols, covariate_cols)], MARGIN = 1, FUN = function(x) any(is.na(x)) ))
+
+# write.csv(x = D[, c(essential_cols, reference_cols, maintenan_cols, structure_cols, covariate_cols)],row.names = F, 
+#           file = "C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories.csv")
+
+#DATASET WITH: 
+# CONTROL ACTIONS "REMOVED STATUS"
+# NAN-free COVARIATES: (Maintenance_indicator, Defect_in, "UIC", Track_type, Track_type3, Combined defect,
+# Profile, Steel, Curve, MGT_max, Line_speed, Turnout indicator, Age)
+# IDENTIFIABLE UIC TO A REASONABLE DEGREE
+# ID's THAT CAN BE LOOKED UP IN A REFERENCE DATASET
 
 
-M = matrix(NA, nrow = length(defect_set), ncol = 7)
-for(i in 1:length(defect_set)){
-  foo = defect_set[[i]]
-  M[i,1] = NROW(foo)
-  if(NROW(foo) < 2){M[i,2] = F;  M[i,3] = F; M[i,4] = F; } 
-  M[i,2] = foo$UIC[length(foo$UIC)]
-  M[i,3] = any(!is.na(foo$Maintenance_date))
-  M[i,4] = !is.na(foo$MGT_min[1])
-  M[i,5] = !is.na(foo$Curve[1])
-  M[i,6] = !is.na(foo$Line_speed[1])
-  M[i,7] = !is.na(foo$Turnout_indicator[1])
-  }
+
+# fit  = lm(formula = Size2 ~ Size1 +Age+ I(t*MGT_max) + I(Maintenance_indicator) + Line_speed, data = D)
+# summary(fit)
+# AIC(fit)
 
 
-
-
-
-
-table(M[,1])
-table(M[,2])
-table(M[,3])
-table(M[,4])
-table(M[,5])
-table(M[,6])
-table(M[,7])
-
-which(M[,1] ==6)
-
-
-
-which(M[,3] == 1 & M[,1] ==8)
-
-defect_set[[16285  ]]
-
-
-#incorporate maintenance
-
-
-#Before sending to Xiaokun: Only send defects with more than one obs. Remember to remove unneeded columns for better readability.
-
-
-
-length(defect_set)
 ## This defect_set could function as a database over defects.
 ## Then functions could be written for instance to: 
 # - taburalize defect counts based on UIC, or spatial distribution, etc.
