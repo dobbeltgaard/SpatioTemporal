@@ -128,10 +128,11 @@ for(i in 1:length(defect_set)){
 #############################################################
 ## rm(list = ls())
 ## library(readxl)
-## source("99_translations_and_naming_convetions.R")
+source("99_translations_and_naming_convetions.R")
+library(readxl)
 ## load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/Defect_set_with_maintenance.RData")
 
-path = "C:/Users/askbi/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
+path = "C:/Users/ATBD/OneDrive - COWI/Documents - A235142 - Predictive maintanance ph.d project (1502)/Data/BDK/"
 asset.files = list.files(paste0(path, "Asset Data"), full.names = T)
 
 #Read superstructure
@@ -234,7 +235,6 @@ for(i in 1:length(defect_set)){
   defect_set[[i]]$Overheight = foo$overheight
 }
 
-
 ### GET TONNAGE INFORMATION ###
 for(i in 1:length(defect_set)){
   idx = defect_set[[i]]$BTR[1] == L$BTR & defect_set[[i]]$Track[1] == L$Spor
@@ -260,6 +260,7 @@ for(i in 1:length(defect_set)){
   defect_set[[i]]$EMGT_min = foo$EMGT_min
   defect_set[[i]]$EMGT_max = foo$EMGT_max
 }
+
 
 ### GET LINE SPEED ###
 for(i in 1:length(defect_set)){
@@ -314,7 +315,7 @@ for(i in 1:length(defect_set)){
 ### CONSTRUCT DEFECT DATAFRAME WITH TRAJECTORIES ###
 ####################################################
 rm(list = ls())
-load("C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories_reference_dataset.RData")
+load("defect_trajectories_reference_dataset.RData")
 
 D = NULL
 for(i in 1:length(defect_set)){
@@ -411,26 +412,38 @@ D$Rail_weight_1m = extract_two_digits(D$Profile)
 extract_three_digits <- function(strings) {str_extract(strings, "\\d{3}")}
 D$Steel_hardness = extract_three_digits(D$Steel)
 
-#REMOVE OBS MISSING SUBSTANTIAL INFORMATION
-idx = is.na(D$UIC) | is.na(D$Size1) | is.na(D$Size2) | is.na(D$Date1) | is.na(D$Date2); D = D[!idx, ]
-
 #CONSTRUCT VARIABLES FOR MODELING
 D$t = as.numeric(D$Date2 - D$Date1)/365
 D$dSize = D$Size2 - D$Size1
 D$Age = (as.numeric( D$Date1 - as.Date(D$Year)) / 365)
+D$load_cycle = D$t*D$MGT_max 
 
 #DEFINE VARIABLE FOR EXTRACTION
-essential_cols = c("ID","dSize", "t", "UIC")
+essential_cols = c("ID","dSize", "load_cycle", "t", "UIC")
 reference_cols = c("Size1", "Size2","Date1", "Date2", "Rail_string")
 maintenan_cols = c("Maintenance_date","Maintenance_indicator", "Grinding", "Milling", "Planing", "Passages","Removed_status")
 structure_cols = c("In_straight_track", "In_curve", "In_trans_curve","Turnout_indicator","Weld","Aluminothermic_weld","Flash_butt_weld","Other_weld")
 covariate_cols = c("Age", "Curve", "Rail_weight_1m", "Steel_hardness", "Line_speed", "MGT_max")
 
+#REMOVE OBS MISSING SUBSTANTIAL INFORMATION
+idx = is.na(D$UIC) | is.na(D$Size1) | is.na(D$Size2) | 
+  is.na(D$Date1) | is.na(D$Date2) | 
+  D$load_cycle %in% c(NA, 0); D = D[!idx, ]
+
+#REMOVE MORE MISSING OR HIGHLY UNLIKELY OBSERVATIONS
+idx = D$dSize < -25 | apply(X = is.na(D[, c(covariate_cols)]), 1, any); D = D[!idx, ]
+
+
+
+
+
+
+
 #Checking number of NANS
 #sum(apply(X = D[, c(essential_cols,reference_cols, structure_cols, covariate_cols)], MARGIN = 1, FUN = function(x) any(is.na(x)) ))
 
-# write.csv(x = D[, c(essential_cols, reference_cols, maintenan_cols, structure_cols, covariate_cols)],row.names = F, 
-#           file = "C:/Users/askbi/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories.csv")
+# write.csv(x = D[, c(essential_cols, reference_cols, maintenan_cols, structure_cols, covariate_cols)],row.names = F,
+#           file = "C:/Users/ATBD/OneDrive - Danmarks Tekniske Universitet/SpatioTemporal/defect_trajectories.csv")
 
 #DATASET WITH: 
 # CONTROL ACTIONS "REMOVED STATUS"
